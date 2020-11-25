@@ -53,7 +53,7 @@ class YahooDownloader:
         data_df = pd.DataFrame()
         num_workers = 10
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-            future_to_url = {executor.submit(lambda tic: yf.download(tic, start=self.start_date, end=self.end_date)): tic for tic in self.ticker_list}
+            future_to_url = {executor.submit(lambda tic: yf.download(tic, start=self.start_date, end=self.end_date), tic): tic for tic in self.ticker_list}
             for future in concurrent.futures.as_completed(future_to_url):
                 url = future_to_url[future]
                 try:
