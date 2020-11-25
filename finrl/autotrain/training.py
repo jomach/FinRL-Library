@@ -24,7 +24,7 @@ def train_one():
     print("==============Start Fetching Data===========")
     df = YahooDownloader(start_date = config.START_DATE,
                      end_date = config.END_DATE,
-                     ticker_list = config.DOW_30_TICKER).fetch_data()
+                     ticker_list = config.SP_500_TICKER).fetch_data()
     print("==============Start Feature Engineering===========")
     df = FeatureEngineer(df,feature_number=5,
                         use_technical_indicator=True,
@@ -43,7 +43,7 @@ def train_one():
                   'ent_coef':0.005, 
                   'learning_rate':0.0007,
                   'verbose':0,
-                  'timesteps':100000}
+                  'timesteps':200000}
     model_a2c = agent.train_A2C(model_name = "A2C_{}".format(now), model_params = a2c_params_tuning)
 
     print("==============Start Trading===========")
