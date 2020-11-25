@@ -56,7 +56,7 @@ class YahooDownloader:
                 df['tic'] = tic
                 return df
             except KeyError:
-                return None
+                return pd.DataFrame()
         with ThreadPoolExecutor(max_workers=10) as executor:
             future_to_url = {executor.submit(yf_downloader, tic): tic for tic in self.ticker_list}
             for future in concurrent.futures.as_completed(future_to_url):
@@ -66,7 +66,7 @@ class YahooDownloader:
                     print('{} generated an exception: {}'.format(future, exc))
                     raise exc
                 else:
-                    if data:
+                    if not data.emtpy:
                         data_df = data_df.append(data)
 
         # reset the index, we want to use numbers as index instead of dates
