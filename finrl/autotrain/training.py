@@ -43,7 +43,7 @@ def train_one():
                   'ent_coef':0.005, 
                   'learning_rate':0.0007,
                   'verbose':0,
-                  'timesteps':200000}
+                  'timesteps':100000}
     model_a2c = agent.train_A2C(model_name = "A2C_{}".format(now), model_params = a2c_params_tuning)
 
     print("==============Start Trading===========")
