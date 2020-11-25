@@ -61,6 +61,7 @@ class YahooDownloader:
                     data = future.result()
                 except Exception as exc:
                     print('{} generated an exception: {}'.format(future, exc))
+                    raise exc
                 else:
                     data_df = data_df.append(data)
 
