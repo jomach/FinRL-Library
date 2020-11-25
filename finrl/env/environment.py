@@ -26,7 +26,7 @@ class EnvSetup:
     def __init__(self, 
         stock_dim:int,
         hmax = 100,
-        initial_amount = 1000000,
+        initial_amount = 3000,
         transaction_cost_pct = 0.001,
         reward_scaling = 1e-4):
 
