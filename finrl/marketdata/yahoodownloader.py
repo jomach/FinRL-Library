@@ -1,6 +1,8 @@
 """Contains methods and classes to collect data from
 Yahoo Finance API
 """
+import concurrent
+from concurrent.futures.thread import ThreadPoolExecutor
 
 import pandas as pd
 import yfinance as yf
@@ -48,10 +50,20 @@ class YahooDownloader:
         """
         # Download and save the data in a pandas DataFrame:
         data_df = pd.DataFrame()
-        for tic in self.ticker_list:
-            temp_df = yf.download(tic, start=self.start_date, end=self.end_date)
-            temp_df['tic'] = tic
-            data_df=data_df.append(temp_df)
+        def yf_downloader(tic):
+            df = yf.download(tic, start=self.start_date, end=self.end_date)
+            df['tic'] = tic
+            return df
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_url = {executor.submit(yf_downloader, tic): tic for tic in self.ticker_list}
+            for future in concurrent.futures.as_completed(future_to_url):
+                try:
+                    data = future.result()
+                except Exception as exc:
+                    print('%r generated an exception: %s' % (data, exc))
+                else:
+                    data_df = data_df.append(data)
+
         # reset the index, we want to use numbers as index instead of dates
         data_df=data_df.reset_index()
         try:
