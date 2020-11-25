@@ -30,9 +30,9 @@ RESULTS_DIR = f"results"
 
 ## time_fmt = '%Y-%m-%d'
 START_DATE = "2018-01-01"
-END_DATE = "2020-11-25"
+END_DATE = "2020-11-01"
 
-START_TRADE_DATE = "2020-01-01"
+START_TRADE_DATE = "2020-05-01"
 
 ## dataset default columns
 DEFAULT_DATA_COLUMNS = ['date','tic','close']
@@ -47,22 +47,22 @@ A2C_PARAMS = {'n_steps':5,
 			  'ent_coef':0.01, 
 			  'learning_rate':0.0007,
 			  'verbose':0,
-			  'timesteps':200000}
+			  'timesteps':20000}
 PPO_PARAMS = {'n_steps':128, 
 			  'ent_coef':0.01, 
 			  'learning_rate':0.00025,   
 			  'nminibatches':4,
 			  'verbose':0,
-			  'timesteps':200000}
+			  'timesteps':20000}
 DDPG_PARAMS = {'batch_size':128, 
 			   'buffer_size':50000,
 			   'verbose':0,
-			   'timesteps':200000}
+			   'timesteps':20000}
 TD3_PARAMS = {'batch_size':128, 
 			   'buffer_size':50000,
 			   'learning_rate':1e-4,
 			   'verbose':0,
-			   'timesteps':200000}
+			   'timesteps':20000}
 
 ########################################################
 ############## Stock Ticker Setup starts ##############
