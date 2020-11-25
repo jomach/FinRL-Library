@@ -50,7 +50,7 @@ class YahooDownloader:
             for the specified stock ticker
         """
         # Download and save the data in a pandas DataFrame:
-        data_df = pd.DataFrame(columns=['date','open','high','low','close','adjcp','volume','tic'])
+        data_df = pd.DataFrame()
         num_workers = 10
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
             future_to_url = {executor.submit(lambda tic: yf.download(tic, start=self.start_date, end=self.end_date), tic): tic for tic in self.ticker_list}
