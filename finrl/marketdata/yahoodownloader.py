@@ -66,7 +66,7 @@ class YahooDownloader:
                     print('{} generated an exception: {}'.format(future, exc))
                     raise exc
                 else:
-                    if not data.emtpy:
+                    if not data.empty:
                         data_df = data_df.append(data)
 
         # reset the index, we want to use numbers as index instead of dates
