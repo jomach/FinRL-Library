@@ -52,12 +52,20 @@ class YahooDownloader:
         # Download and save the data in a pandas DataFrame:
         data_df = pd.DataFrame()
         num_workers = 10
-        with ProcessPoolExecutor(max_workers=num_workers) as executor:
-            list_of_futures = executor.map(lambda: yf.download(tic, start=self.start_date, end=self.end_date), self.ticker_list)
-            for tic in list_of_futures:
-                temp_df = tic.result()
-                temp_df['tic'] = tic
-                data_df=data_df.append(temp_df)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            future_to_url = {executor.submit(lambda tic: yf.download(tic, start=self.start_date, end=self.end_date)): tic for tic in self.ticker_list}
+            for future in concurrent.futures.as_completed(future_to_url):
+                url = future_to_url[future]
+                try:
+                    data = future.result()
+                except Exception as exc:
+                    print('%r generated an exception: %s' % (url, exc))
+                else:
+                    print('%r page is %d bytes' % (url, len(data)))
+                    temp_df = data
+                    temp_df['tic'] = data
+                    data_df = data_df.append(temp_df)
+
         # reset the index, we want to use numbers as index instead of dates
         data_df=data_df.reset_index()
         try:
