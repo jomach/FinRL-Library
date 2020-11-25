@@ -1,6 +1,9 @@
 """Contains methods and classes to collect data from
 Yahoo Finance API
 """
+import concurrent
+import multiprocessing
+from concurrent.futures.process import ProcessPoolExecutor
 
 import pandas as pd
 import yfinance as yf
@@ -48,10 +51,13 @@ class YahooDownloader:
         """
         # Download and save the data in a pandas DataFrame:
         data_df = pd.DataFrame()
-        for tic in self.ticker_list:
-            temp_df = yf.download(tic, start=self.start_date, end=self.end_date)
-            temp_df['tic'] = tic
-            data_df=data_df.append(temp_df)
+        num_workers = 10
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
+            list_of_futures = executor.map(lambda: yf.download(tic, start=self.start_date, end=self.end_date), self.ticker_list)
+            for tic in list_of_futures:
+                temp_df = tic.result()
+                temp_df['tic'] = tic
+                data_df=data_df.append(temp_df)
         # reset the index, we want to use numbers as index instead of dates
         data_df=data_df.reset_index()
         try:
