@@ -59,9 +59,13 @@ class YahooDownloader:
                 try:
                     data = future.result()
                 except Exception as exc:
-                    print('%r generated an exception: %s' % (url, exc))
+                    print('%r generated an exception: %s' % (data, exc))
                 else:
-                    print('%r page is %d bytes' % (url, len(data)))
+                    print('%r page is %d bytes' % (data, len(data)))
+                    print("From pool:")
+                    print(data)
+                    print("Mother:")
+                    print(data_df)
                     data_df = data_df.append(data)
                     print(data_df)
 

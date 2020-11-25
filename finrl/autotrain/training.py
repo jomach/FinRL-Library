@@ -24,7 +24,7 @@ def train_one():
     print("==============Start Fetching Data===========")
     df = YahooDownloader(start_date = config.START_DATE,
                      end_date = config.END_DATE,
-                     ticker_list = config.DOW_30_TICKER).fetch_data()
+                     ticker_list = config.SINGLE_TICKER).fetch_data()
     print("==============Start Feature Engineering===========")
     df = FeatureEngineer(df,feature_number=5,
                         use_technical_indicator=True,
