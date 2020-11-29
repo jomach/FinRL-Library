@@ -8,7 +8,53 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 class SingleStockEnv(gym.Env):
-    """A stock trading environment for OpenAI gym"""
+    """A single stock trading environment for OpenAI gym
+
+    Attributes
+    ----------
+        df: DataFrame
+            input data
+        stock_dim : int
+            number of unique stocks
+        hmax : int
+            maximum number of shares to trade
+        initial_amount : int
+            start money
+        transaction_cost_pct: float
+            transaction cost percentage per trade
+        reward_scaling: float
+            scaling factor for reward, good for training
+        state_space: int
+            the dimension of input features
+        action_space: int
+            equals stock dimension
+        tech_indicator_list: list
+            a list of technical indicator names
+        turbulence_threshold: int
+            a threshold to control risk aversion
+        day: int
+            an increment number to control date
+
+    Methods
+    -------
+    _sell_stock()
+        perform sell action based on the sign of the action
+    _buy_stock()
+        perform buy action based on the sign of the action
+    step()
+        at each step the agent will return actions, then 
+        we will calculate the reward, and return the next observation.
+    reset()
+        reset the environment
+    render()
+        use render to return other functions
+    save_asset_memory()
+        return account value at each time step
+    save_action_memory()
+        return actions/positions at each time step
+        
+
+    """
     metadata = {'render.modes': ['human']}
 
     def __init__(self, 
@@ -45,11 +91,15 @@ class SingleStockEnv(gym.Env):
         self.data = self.df.loc[self.day,:]
         self.terminal = False     
         self.turbulence_threshold = turbulence_threshold        
-        # initalize state
+        # initalize state: inital amount + close price + shares + technical indicators + other features
         self.state = [self.initial_amount] + \
                       [self.data.close] + \
                       [0]*self.stock_dim  + \
-                      sum([[self.data[tech]] for tech in self.tech_indicator_list ], [])
+                      sum([[self.data[tech]] for tech in self.tech_indicator_list ], [])+ \
+                      [self.data.open] + \
+                      [self.data.high] + \
+                      [self.data.low] +\
+                      [self.data.daily_return] 
         # initialize reward
         self.reward = 0
         self.cost = 0
@@ -58,8 +108,8 @@ class SingleStockEnv(gym.Env):
         self.rewards_memory = []
         self.actions_memory=[]
         self.date_memory=[self.data.date]
+        self.close_price_memory = [self.data.close]
         self.trades = 0
-        #self.reset()
         self._seed()
 
 
@@ -116,25 +166,20 @@ class SingleStockEnv(gym.Env):
             df_total_value.columns = ['account_value']
             df_total_value['daily_return']=df_total_value.pct_change(1)
             if df_total_value['daily_return'].std() !=0:
-                sharpe = (252**0.5)*df_total_value['daily_return'].mean()/ \
+              sharpe = (252**0.5)*df_total_value['daily_return'].mean()/ \
                     df_total_value['daily_return'].std()
-                print("Sharpe: ",sharpe)
-                print("=================================")
+              print("Sharpe: ",sharpe)
+              print("=================================")
             df_rewards = pd.DataFrame(self.rewards_memory)
             #df_rewards.to_csv('results/account_rewards_train.csv')
             
-            # print('total asset: {}'.format(self.state[0]+ sum(np.array(self.state[1:29])*np.array(self.state[29:]))))
-            #with open('obs.pkl', 'wb') as f:  
-            #    pickle.dump(self.state, f)
             
             return self.state, self.reward, self.terminal,{}
 
         else:
-            # print(np.array(self.state[1:29]))
-            self.date_memory.append(self.data.date)
-            self.actions_memory.append(actions)
-
+            #print(actions)
             actions = actions * self.hmax
+            self.actions_memory.append(actions)
             #actions = (actions.astype(int))
             
             begin_total_asset = self.state[0]+ \
@@ -161,11 +206,18 @@ class SingleStockEnv(gym.Env):
             self.state =  [self.state[0]] + \
                     [self.data.close] + \
                     list(self.state[(self.stock_dim+1):(self.stock_dim*2+1)]) + \
-                      sum([[self.data[tech]] for tech in self.tech_indicator_list ], [])
+                      sum([[self.data[tech]] for tech in self.tech_indicator_list ], [])+ \
+                      [self.data.open] + \
+                      [self.data.high] + \
+                      [self.data.low] +\
+                      [self.data.daily_return] 
             
             end_total_asset = self.state[0]+ \
             sum(np.array(self.state[1:(self.stock_dim+1)])*np.array(self.state[(self.stock_dim+1):(self.stock_dim*2+1)]))
             self.asset_memory.append(end_total_asset)
+            self.date_memory.append(self.data.date)
+            self.close_price_memory.append(self.data.close)
+
             #print("end_total_asset:{}".format(end_total_asset))
             
             self.reward = end_total_asset - begin_total_asset            
@@ -192,8 +244,11 @@ class SingleStockEnv(gym.Env):
         self.state = [self.initial_amount] + \
                       [self.data.close] + \
                       [0]*self.stock_dim + \
-                      sum([[self.data[tech]] for tech in self.tech_indicator_list ], [])
-        # iteration += 1 
+                      sum([[self.data[tech]] for tech in self.tech_indicator_list ], [])+ \
+                      [self.data.open] + \
+                      [self.data.high] + \
+                      [self.data.low] +\
+                      [self.data.daily_return] 
         return self.state
     
     def render(self, mode='human'):
@@ -206,6 +261,16 @@ class SingleStockEnv(gym.Env):
         #print(len(asset_list))
         df_account_value = pd.DataFrame({'date':date_list,'account_value':asset_list})
         return df_account_value
+
+    def save_action_memory(self):
+        # date and close price length must match actions length
+        date_list = self.date_memory[:-1]
+        close_price_list = self.close_price_memory[:-1]
+
+        action_list = self.actions_memory
+        df_actions = pd.DataFrame({'date':date_list,'actions':action_list,'close_price':close_price_list})
+        df_actions['daily_return']=df_actions.close_price.pct_change()
+        return df_actions
 
     def _seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)

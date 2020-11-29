@@ -11,12 +11,16 @@ class FeatureEngineer:
     ----------
         df: DataFrame
             data downloaded from Yahoo API
-        feature_number : int
-            number of features we used
+            7 columns: A date, open, high, low, close, volume and tick symbol
+            for the specified stock ticker
         use_technical_indicator : boolean
             we technical indicator or not
+        tech_indicator_list : list
+            a list of technical indicator names (modified from config.py)
         use_turbulence : boolean
             use turbulence index or not
+        user_defined_feature:boolean
+            user user defined features or not
 
     Methods
     -------
@@ -26,18 +30,20 @@ class FeatureEngineer:
     """
     def __init__(self, 
         df,
-        feature_number = 5,
         use_technical_indicator=True,
-        use_turbulence=False):
+        tech_indicator_list = config.TECHNICAL_INDICATORS_LIST,
+        use_turbulence=False,
+        user_defined_feature=False):
 
         self.df = df
-        self.feature_number = feature_number
-        type_list = self.__get_type_list(feature_number)
-        self.__features = type_list
-        self.__data_columns = config.DEFAULT_DATA_COLUMNS + self.__features
         self.use_technical_indicator = use_technical_indicator
-        self.tech_indicator_list = config.TECHNICAL_INDICATORS_LIST
+        self.tech_indicator_list = tech_indicator_list
         self.use_turbulence=use_turbulence
+        self.user_defined_feature=user_defined_feature
+
+        #type_list = self._get_type_list(5)
+        #self.__features = type_list
+        #self.__data_columns = config.DEFAULT_DATA_COLUMNS + self.__features
 
 
     def preprocess_data(self):
@@ -49,15 +55,20 @@ class FeatureEngineer:
 
         # add technical indicators
         # stockstats require all 5 columns
-        if (self.use_technical_indicator==True) & (self.feature_number>=5):
+        if (self.use_technical_indicator==True):
             # add technical indicators using stockstats
-            df=self.__add_technical_indicator(df)
+            df=self.add_technical_indicator(df)
             print("Successfully added technical indicators")
 
         # add turbulence index for multiple stock
         if self.use_turbulence==True:
-            df = self.__add_turbulence(df)
+            df = self.add_turbulence(df)
             print("Successfully added turbulence index")
+
+        # add user defined feature
+        if self.user_defined_feature == True:
+            df = self.add_user_defined_feature(df)
+            print("Successfully added user defined features")
 
        
         # fill the missing values at the beginning and the end
@@ -65,65 +76,58 @@ class FeatureEngineer:
         return df
 
 
-    def __add_technical_indicator(self, data):
-            """
-            calcualte technical indicators
-            use stockstats package to add technical inidactors
-            :param data: (df) pandas dataframe
-            :return: (df) pandas dataframe
-            """
-            df = data.copy()
-            stock = Sdf.retype(df.copy())
-            unique_ticker = stock.tic.unique()
+    def add_technical_indicator(self, data):
+        """
+        calcualte technical indicators
+        use stockstats package to add technical inidactors
+        :param data: (df) pandas dataframe
+        :return: (df) pandas dataframe
+        """
+        df = data.copy()
+        stock = Sdf.retype(df.copy())
+        unique_ticker = stock.tic.unique()
 
-            for indicator in self.tech_indicator_list:
-                indicator_df = pd.DataFrame()
-                for i in range(len(unique_ticker)):
-                    try:
-                        temp_indicator = stock[stock.tic == unique_ticker[i]][indicator]
-                        temp_indicator= pd.DataFrame(temp_indicator)
-                        indicator_df = indicator_df.append(temp_indicator, ignore_index=True)
-                    except Exception as e:
-                        print(e)
-                df[indicator] = indicator_df
-            return df
+        for indicator in self.tech_indicator_list:
+            indicator_df = pd.DataFrame()
+            for i in range(len(unique_ticker)):
+                try:
+                    temp_indicator = stock[stock.tic == unique_ticker[i]][indicator]
+                    temp_indicator= pd.DataFrame(temp_indicator)
+                    indicator_df = indicator_df.append(temp_indicator, ignore_index=True)
+                except Exception as e:
+                    print(e)
+            df[indicator] = indicator_df
+        return df
+
+    def add_user_defined_feature(self, data):
+        """
+         add user defined features
+        :param data: (df) pandas dataframe
+        :return: (df) pandas dataframe
+        """          
+        df = data.copy()
+        df['daily_return']=df.close.pct_change(1)
+        #df['return_lag_1']=df.close.pct_change(2)
+        #df['return_lag_2']=df.close.pct_change(3)
+        #df['return_lag_3']=df.close.pct_change(4)
+        #df['return_lag_4']=df.close.pct_change(5)
+        return df
 
 
-
-    def __add_turbulence(self, data):
+    def add_turbulence(self, data):
         """
         add turbulence index from a precalcualted dataframe
         :param data: (df) pandas dataframe
         :return: (df) pandas dataframe
         """
         df = data.copy()
-        turbulence_index = self.__calcualte_turbulence(df)
+        turbulence_index = self.calcualte_turbulence(df)
         df = df.merge(turbulence_index, on='date')
         df = df.sort_values(['date','tic']).reset_index(drop=True)
         return df
 
-    def __get_type_list(self, feature_number):
-        """
-        :param feature_number: an int indicates the number of features
-        :return: a list of features n
-        """
-        if feature_number == 1:
-            type_list = ["close"]
-        elif feature_number == 2:
-            type_list = ["close", "volume"]
-            #raise NotImplementedError("the feature volume is not supported currently")
-        elif feature_number == 3:
-            type_list = ["close", "high", "low"]
-        elif feature_number == 4:
-            type_list = ["close", "high", "low", "open"]
-        elif feature_number == 5:
-            type_list = ["close", "high", "low", "open","volume"]  
-        else:
-            raise ValueError("feature number could not be %s" % feature_number)
-        return type_list
 
-
-    def __calcualte_turbulence(self, data):
+    def calcualte_turbulence(self, data):
         """calculate turbulence index based on dow 30"""
         # can add other market assets
         df = data.copy()
@@ -155,3 +159,23 @@ class FeatureEngineer:
         turbulence_index = pd.DataFrame({'date':df_price_pivot.index,
                                          'turbulence':turbulence_index})
         return turbulence_index
+
+    def _get_type_list(self, feature_number):
+        """
+        :param feature_number: an int indicates the number of features
+        :return: a list of features n
+        """
+        if feature_number == 1:
+            type_list = ["close"]
+        elif feature_number == 2:
+            type_list = ["close", "volume"]
+            #raise NotImplementedError("the feature volume is not supported currently")
+        elif feature_number == 3:
+            type_list = ["close", "high", "low"]
+        elif feature_number == 4:
+            type_list = ["close", "high", "low", "open"]
+        elif feature_number == 5:
+            type_list = ["close", "high", "low", "open","volume"]  
+        else:
+            raise ValueError("feature number could not be %s" % feature_number)
+        return type_list

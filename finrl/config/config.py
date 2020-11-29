@@ -24,6 +24,7 @@ TESTING_DATA_FILE = "test.csv"
 #TRAINED_MODEL_DIR = f"trained_models/{now}"
 DATA_SAVE_DIR = f"datasets"
 TRAINED_MODEL_DIR = f"trained_models"
+TENSORBOARD_LOG_DIR = f"tensorboard_log"
 RESULTS_DIR = f"results"
 #os.makedirs(TRAINED_MODEL_DIR)
 
@@ -63,6 +64,14 @@ TD3_PARAMS = {'batch_size':128,
 			   'learning_rate':1e-4,
 			   'verbose':0,
 			   'timesteps':20000}
+SAC_PARAMS = {'batch_size': 64,
+			  'buffer_size': 100000,
+			  'learning_rate': 0.0001,
+			  'learning_starts':100,
+			  'batch_size':64,
+			  'ent_coef':'auto_0.1',
+			  'timesteps': 50000,
+			  'verbose': 0}
 
 ########################################################
 ############## Stock Ticker Setup starts ##############

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from sklearn import preprocessing
 matplotlib.use('Agg')
 import datetime
 
@@ -23,40 +24,64 @@ def train_one():
     """
     print("==============Start Fetching Data===========")
     df = YahooDownloader(start_date = config.START_DATE,
-                     end_date = config.END_DATE,
-                     ticker_list = config.SP_500_TICKER).fetch_data()
+                         end_date = config.END_DATE,
+                         ticker_list = config.SP_500_TICKER).fetch_data()
     print("==============Start Feature Engineering===========")
-    df = FeatureEngineer(df,feature_number=5,
+    df = FeatureEngineer(df,
                         use_technical_indicator=True,
                         use_turbulence=True).preprocess_data()
 
 
+    # Training & Trade data split
     train = data_split(df, config.START_DATE,config.START_TRADE_DATE)
-    trade = data_split(df,config.START_TRADE_DATE,config.END_DATE)
-    print("==============Creating Environment ===========")
-    env_setup = EnvSetup(stock_dim = len(train.tic.unique()))
+    trade = data_split(df, config.START_TRADE_DATE,config.END_DATE)
+
+    # data normalization
+    #feaures_list = list(train.columns)
+    #feaures_list.remove('date')
+    #feaures_list.remove('tic')
+    #feaures_list.remove('close')
+    #print(feaures_list)
+    #data_normaliser = preprocessing.StandardScaler()
+    #train[feaures_list] = data_normaliser.fit_transform(train[feaures_list])
+    #trade[feaures_list] = data_normaliser.fit_transform(trade[feaures_list])
+
+    # calculate state action space
+    stock_dimension = len(train.tic.unique())
+    state_space = 1 + 2*stock_dimension + len(config.TECHNICAL_INDICATORS_LIST)*stock_dimension 
+
+    env_setup = EnvSetup(stock_dim = stock_dimension,
+                         state_space = state_space,
+                         hmax = 100,
+                         initial_amount = 3000,
+                         transaction_cost_pct = 0.001)
+
     env_train = env_setup.create_env_training(data = train,
                                           env_class = StockEnvTrain)
     agent = DRLAgent(env = env_train)
+
     print("==============Model Training===========")
     now = datetime.datetime.now().strftime('%Y%m%d-%Hh%M')
+
     a2c_params_tuning = {'n_steps':5, 
-                  'ent_coef':0.005, 
-                  'learning_rate':0.0007,
-                  'verbose':0,
-                  'timesteps':200000}
-    model_a2c = agent.train_A2C(model_name = "A2C_{}".format(now), model_params = a2c_params_tuning)
+        'ent_coef':0.005, 
+        'learning_rate':0.0007,
+        'verbose':0,
+        'timesteps':80000}
+
+    model = agent.train_A2C(model_name = "A2C_{}".format(now), model_params = a2c_params_tuning)
 
     print("==============Start Trading===========")
     env_trade, obs_trade = env_setup.create_env_trading(data = trade,
                                          env_class = StockEnvTrade,
                                          turbulence_threshold=250) 
 
-    df_account_value = DRLAgent.DRL_prediction(model=model_a2c,
-                            test_data = trade,
-                            test_env = env_trade,
-                            test_obs = obs_trade)
-    df_account_value.to_csv("./"+config.RESULTS_DIR+"/"+now+'.csv')
+    df_account_value,df_actions = DRLAgent.DRL_prediction(model=model,
+                                                          test_data = trade,
+                                                          test_env = env_trade,
+                                                          test_obs = obs_trade)
+    df_account_value.to_csv("./"+config.RESULTS_DIR+"/df_account_value_"+now+'.csv')
+    df_actions.to_csv("./"+config.RESULTS_DIR+"/df_actions_"+now+'.csv')
 
     print("==============Get Backtest Results===========")
     perf_stats_all = BackTestStats(df_account_value)

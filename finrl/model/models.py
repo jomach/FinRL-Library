@@ -30,8 +30,10 @@ class DRLAgent:
         the implementation for A2C algorithm
     train_DDPG()
         the implementation for DDPG algorithm
-     train_TD3()
-        the implementation for TD3 algorithm       
+    train_TD3()
+        the implementation for TD3 algorithm      
+    DRL_prediction() 
+        make a prediction in a test dataset and get results
     """
     def __init__(self, env):
         self.env = env
@@ -45,9 +47,10 @@ class DRLAgent:
                     n_steps = model_params['n_steps'],
                     ent_coef = model_params['ent_coef'],
                     learning_rate = model_params['learning_rate'],
-                    verbose = model_params['verbose']
+                    verbose = model_params['verbose'],
+                    tensorboard_log = f"{config.TENSORBOARD_LOG_DIR}/{model_name}"
                     )
-        model.learn(total_timesteps=model_params['timesteps'])
+        model.learn(total_timesteps=model_params['timesteps'], tb_log_name = "A2C_run")
         end = time.time()
 
         model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
@@ -75,9 +78,10 @@ class DRLAgent:
                     buffer_size=model_params['buffer_size'],
                     param_noise=param_noise,
                     action_noise=action_noise,
-                    verbose=model_params['verbose']
+                    verbose=model_params['verbose'],
+                    tensorboard_log = f"{config.TENSORBOARD_LOG_DIR}/{model_name}"
                     )
-        model.learn(total_timesteps=model_params['timesteps'])
+        model.learn(total_timesteps=model_params['timesteps'], tb_log_name = "DDPG_run")
         end = time.time()
 
         model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
@@ -101,13 +105,37 @@ class DRLAgent:
                     buffer_size=model_params['buffer_size'],
                     learning_rate = model_params['learning_rate'],
                     action_noise = action_noise,
-                    verbose=model_params['verbose']
+                    verbose=model_params['verbose'],
+                    tensorboard_log = f"{config.TENSORBOARD_LOG_DIR}/{model_name}"
                     )
-        model.learn(total_timesteps=model_params['timesteps'])
+        model.learn(total_timesteps=model_params['timesteps'], tb_log_name = "TD3_run")
         end = time.time()
 
         model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
         print('Training time (DDPG): ', (end-start)/60,' minutes')
+        return model
+
+    def train_SAC(self, model_name, model_params = config.SAC_PARAMS):
+        """TD3 model"""
+        from stable_baselines import SAC
+
+        env_train = self.env
+
+        start = time.time()
+        model = SAC('MlpPolicy', env_train,
+                    batch_size=model_params['batch_size'],
+                    buffer_size=model_params['buffer_size'],
+                    learning_rate = model_params['learning_rate'],
+                    learning_starts=model_params['learning_starts'],
+                    ent_coef=model_params['ent_coef'],
+                    verbose=model_params['verbose'],
+                    tensorboard_log = f"{config.TENSORBOARD_LOG_DIR}/{model_name}"
+                    )
+        model.learn(total_timesteps=model_params['timesteps'], tb_log_name = "SAC_run")
+        end = time.time()
+
+        model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+        print('Training time (SAC): ', (end-start)/60,' minutes')
         return model
 
 
@@ -122,9 +150,10 @@ class DRLAgent:
                      ent_coef = model_params['ent_coef'],
                      learning_rate = model_params['learning_rate'],
                      nminibatches = model_params['nminibatches'],
-                     verbose = model_params['verbose']
+                     verbose = model_params['verbose'],
+                     tensorboard_log = f"{config.TENSORBOARD_LOG_DIR}/{model_name}"
                      )
-        model.learn(total_timesteps=model_params['timesteps'])
+        model.learn(total_timesteps=model_params['timesteps'], tb_log_name = "PPO_run")
         end = time.time()
 
         model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
@@ -141,5 +170,6 @@ class DRLAgent:
             test_obs, rewards, dones, info = test_env.step(action)
             if i == (len(test_data.index.unique()) - 2):
                 account_memory = test_env.env_method(method_name = 'save_asset_memory')
+                actions_memory = test_env.env_method(method_name = 'save_action_memory')
         end = time.time()
-        return account_memory[0]
+        return account_memory[0], actions_memory[0]
