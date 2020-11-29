@@ -24,7 +24,7 @@ def train_one():
     print("==============Start Fetching Data===========")
     df = YahooDownloader(start_date = config.START_DATE,
                      end_date = config.END_DATE,
-                     ticker_list = config.DOW_30_TICKER).fetch_data()
+                     ticker_list = config.SINGLE_CRYPTO).fetch_data()
     print("==============Start Feature Engineering===========")
     df = FeatureEngineer(df,feature_number=5,
                         use_technical_indicator=True,
@@ -33,6 +33,7 @@ def train_one():
 
     train = data_split(df, config.START_DATE,config.START_TRADE_DATE)
     trade = data_split(df,config.START_TRADE_DATE,config.END_DATE)
+    print("==============Creating Environment ===========")
     env_setup = EnvSetup(stock_dim = len(train.tic.unique()))
     env_train = env_setup.create_env_training(data = train,
                                           env_class = StockEnvTrain)

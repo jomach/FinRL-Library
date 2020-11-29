@@ -77,6 +77,9 @@ DOW_30_TICKER = ['AAPL','MSFT','JPM','V','RTX','PG','GS','NKE','DIS','AXP',
                   'HD','INTC','WMT','IBM','MRK','UNH','KO','CAT','TRV','JNJ',
                   'CVX','MCD','VZ','CSCO','XOM','BA','MMM','PFE','WBA','DD']
 
+
+SINGLE_CRYPTO = ['XRP-EUR', 'ADA-EUR', 'BTC-EUR']
+
 # Nasdaq 100 constituents at 2019/01
 NAS_100_TICKER = [
 'AMGN','AAPL','AMAT','INTC','PCAR','PAYX','MSFT','ADBE','CSCO','XLNX',
